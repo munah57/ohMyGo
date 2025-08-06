@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-
+	"vaqua/models"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -35,9 +35,11 @@ func InitDb() *gorm.DB {
 	}
 	fmt.Println("connected to database successfully!")
 
-	err = Db.AutoMigrate()
+	err = Db.AutoMigrate(&models.User{})
 	if err != nil {
 		log.Fatal("unable to migrate schema", err)
 	}
+	fmt.Println("migration completed successfully")
+	
 	return Db
 }

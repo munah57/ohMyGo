@@ -28,7 +28,8 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 	})
 
 	// public routes
-	r.POST("/signup", userHandler.SignupUser)
+	r.POST("/signup", userHandler.SignUpNewUserAcct)
+	r.POST("/login", userHandler.LoginUser)
 
 
 	//  Authenticated user routes

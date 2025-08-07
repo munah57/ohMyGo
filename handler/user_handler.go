@@ -62,3 +62,12 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
     }
     c.JSON(http.StatusOK, gin.H{"token": token})
 }
+
+func (h *UserHandler) LogoutUser(c *gin.Context) {
+	err := h.Service.LogoutUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}

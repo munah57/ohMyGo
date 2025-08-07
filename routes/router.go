@@ -33,6 +33,7 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 
 
 	//  Authenticated user routes
+	r.POST("/logout", userHandler.LogoutUser)
 
 	return r
 

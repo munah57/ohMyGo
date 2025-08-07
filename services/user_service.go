@@ -7,6 +7,8 @@ import (
 	"vaqua/models"
 	"vaqua/repository"
 	"vaqua/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserService struct {
@@ -95,3 +97,16 @@ func (s *UserService) LoginUser(request models.LoginRequest) (string, error) {
     return token, nil 
 }
 
+
+//LOG OUT USER
+func (s *UserService) LogoutUser(c *gin.Context) error {
+	_, err := middleware.GetUserIDFromToken(c)
+	if err != nil {
+		return fmt.Errorf("unauthorized: %v", err)
+	}
+
+	//clear the token from context
+	c.Set("userID", nil)
+	fmt.Println("User logged out successfully")
+	return nil
+}

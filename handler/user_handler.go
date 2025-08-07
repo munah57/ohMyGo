@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"fmt"
+	
 	"net/http"
 	"net/mail"
 	"vaqua/models"
@@ -19,8 +19,6 @@ func (h *UserHandler) SignUpNewUserAcct(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-
-	fmt.Println("Signup request received:", newUser.Email)
 
 	if _, err := mail.ParseAddress(newUser.Email); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
@@ -52,10 +50,9 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
     if err := c.ShouldBindJSON(&request); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
         return
-    }
-	fmt.Println("error logging in")
+    }	
     token, err := h.Service.LoginUser(request)
-	fmt.Println("error logging in 2")
+	
     if err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
         return

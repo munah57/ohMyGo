@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"vaqua/redis"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -16,7 +17,7 @@ func GenerateJWT(userID uint) (string, error) {
 	
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"exp":  time.Now().Add(time.Hour * 12).Unix(),
+		"exp":     time.Now().Add(time.Hour * 12).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -56,17 +57,29 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// Extract token from header (remove "Bearer " prefix)
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 
-		// Verify the token
-		_, err := VerifyJWT(tokenString)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			c.Abort() // Stop further processing of the request
+		// Check Redis blacklist
+		val, err := redis.Client.Get(redis.Ctx, tokenString).Result()
+		if err == nil && val == "blacklisted" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is blacklisted"})
+			c.Abort()
+		} else if err != nil && err != redis.Nil {
+		} else if err != nil && err != redis.Nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			c.Abort()
 			return
 		}
 
-		// Continue processing the request
+		// Verify JWT token
+		token, err := VerifyJWT(tokenString)
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+
+		// Token is valid and not blacklisted
 		c.Next()
 	}
 }

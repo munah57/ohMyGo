@@ -3,10 +3,17 @@ package services
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 	"vaqua/middleware"
 	"vaqua/models"
+	"vaqua/redis"
 	"vaqua/repository"
 	"vaqua/utils"
+	"log"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 )
 
 type UserService struct {
@@ -95,3 +102,57 @@ func (s *UserService) LoginUser(request models.LoginRequest) (string, error) {
     return token, nil 
 }
 
+
+//LOG OUT USER
+func (s *UserService) LogoutUser(c *gin.Context) error {
+	
+	//get token string from Auth header
+
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return errors.New("authorization header required")
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	tokenString = strings.TrimSpace(tokenString)
+
+	// Check if token is already blacklisted
+	blacklisted, err := redis.Client.Get(redis.Ctx, tokenString).Result()
+	if err == nil && blacklisted == "blacklisted" {
+		log.Println("Token is already blacklisted")
+		return errors.New("token already blacklisted")
+	}
+	//parse the token get expiration time
+
+	token, err := middleware.VerifyJWT(tokenString)
+	if err != nil || !token.Valid {
+		return errors.New("invalid token")
+	}
+
+	// using claims here to get expiration time so token is not expired before blacklisting
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return errors.New("could not parse claims")
+	}
+
+	expUnix, ok := claims["exp"].(float64)
+	if !ok {
+		return errors.New("invalid  expiration time in token claims")
+	}
+
+	//store the token in redis with expiration time
+
+	expirationTime := time.Unix(int64(expUnix), 0)
+	duration := time.Until(expirationTime)
+
+	err = redis.Client.Set(redis.Ctx, tokenString, "blacklisted", duration).Err()
+	if err != nil {
+		log.Printf("Failed to blacklist token from Redis: %v", err)
+	} else {
+		log.Println("Token successfully blacklisted in Redis")
+	}
+
+	//clear the token from context
+	c.Set("token", nil)
+	return nil
+}

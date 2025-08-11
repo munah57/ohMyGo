@@ -44,8 +44,7 @@ func VerifyJWT(tokenString string) (*jwt.Token, error) {
 	}
 	return token, nil
 }
-
-
+//removed duplicate code 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get Authorization header
@@ -64,7 +63,6 @@ func AuthMiddleware() gin.HandlerFunc {
 		if err == nil && val == "blacklisted" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is blacklisted"})
 			c.Abort()
-		} else if err != nil && err != redis.Nil {
 		} else if err != nil && err != redis.Nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			c.Abort()

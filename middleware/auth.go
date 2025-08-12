@@ -6,32 +6,41 @@ import (
 	"os"
 	"strings"
 	"time"
+	"vaqua/redis"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 )
 
-func GenerateJWT(userID uint) (string, error) {
+func GenerateJWT(userID uint, email string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", fmt.Errorf("JWT_SECRET not set")
+	}
 	
 	claims := jwt.MapClaims{
 		"user_id": userID,
+		"email": email,
 		"exp":  time.Now().Add(time.Hour * 12).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
+	
 	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return "", err
 	}
-
+	
 	return tokenString, nil
 
 }	
 
 func VerifyJWT(tokenString string) (*jwt.Token, error) {
 	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return nil, fmt.Errorf("JWT_SECRET not set")
+	}
+
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
@@ -43,8 +52,7 @@ func VerifyJWT(tokenString string) (*jwt.Token, error) {
 	}
 	return token, nil
 }
-
-
+//removed duplicate code 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get Authorization header
@@ -55,18 +63,57 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "bearer token format required"})
+			c.Abort()
+			return
+		}
+		
 		// Extract token from header (remove "Bearer " prefix)
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 
-		// Verify the token
-		_, err := VerifyJWT(tokenString)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			c.Abort() // Stop further processing of the request
+		// Check Redis blacklist
+		val, err := redis.Client.Get(redis.Ctx, tokenString).Result()
+		if err == nil && val == "blacklisted" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is blacklisted"})
+			c.Abort()
+		} else if err != nil && err != redis.Nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			c.Abort()
+			return
+		}
+
+		// Verify JWT token
+		token, err := VerifyJWT(tokenString)
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+		claims, ok:= token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
+			c.Abort()
+			return
+		}
+
+		userIDFloat, ok := claims["user_id"].(float64)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found  in token"})
+			c.Abort()
+			return
+		}
+
+		email, ok := claims["email"].(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found  in token"})
+			c.Abort()
 			return
 		}
 
 		// Continue processing the request
+		c.Set("user_id", uint(userIDFloat))
+		c.Set("email", email)
 		c.Next()
 	}
 }

@@ -12,27 +12,35 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func GenerateJWT(userID uint) (string, error) {
+func GenerateJWT(userID uint, email string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", fmt.Errorf("JWT_SECRET not set")
+	}
 	
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"exp":     time.Now().Add(time.Hour * 12).Unix(),
+		"email": email,
+		"exp":  time.Now().Add(time.Hour * 12).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
+	
 	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return "", err
 	}
-
+	
 	return tokenString, nil
 
 }	
 
 func VerifyJWT(tokenString string) (*jwt.Token, error) {
 	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return nil, fmt.Errorf("JWT_SECRET not set")
+	}
+
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
@@ -55,6 +63,12 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "bearer token format required"})
+			c.Abort()
+			return
+		}
+		
 		// Extract token from header (remove "Bearer " prefix)
 			tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 
@@ -77,7 +91,9 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Token is valid and not blacklisted
+		// Continue processing the request
+		c.Set("user_id", uint(userIDFloat))
+		c.Set("email", email)
 		c.Next()
 	}
 }

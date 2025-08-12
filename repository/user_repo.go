@@ -8,14 +8,16 @@ import (
 )
 
 type UserRepository interface {
-	GetNewUserByEmail(email string) (*models.User, error)
+	GetUserByEmail(email string) (*models.User, error)
 	CreateNewUser(user *models.User) error
 	CheckAccNumExists(accountNumber uint) (bool, error)
+	GetUserByID(id uint) (*models.User, error)
+	UpdateUserProfile(user *models.User) error
 }
 
 type UserRepo struct{}
 
-func (r *UserRepo) GetNewUserByEmail(email string) (*models.User, error) {
+func (r *UserRepo) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	
 	err := db.Db.Where("email = ?", email).First(&user).Error
@@ -44,3 +46,17 @@ func (r *UserRepo) CreateNewUser(user *models.User) error {
 }
 
 
+func (r *UserRepo) GetUserByID(id uint) (*models.User, error) {
+	var user models.User
+
+	err := db.Db.Where("id = ?", id).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *UserRepo) UpdateUserProfile(updatedUser *models.User) error {
+	return db.Db.Save(updatedUser).Error
+
+}

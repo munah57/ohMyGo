@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handler.TransferRequestHandler, transactionHandler *handler.TransactionHandler, db *gorm.DB) *gin.Engine {
+func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handler.TransferHandler, transactionHandler *handler.TransactionHandler, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
 	// Health check endpoint
@@ -34,6 +34,7 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 
 	//  Authenticated user routes
 	r.POST("/logout", userHandler.LogoutUser)
+	r.POST("/transfer", transferRequestHandler.CreateTransfer)
 
 	return r
 

@@ -8,9 +8,10 @@ type User struct {
 	Lastname       *string `json:"lastname,omitempty"`
 	Email          string  `json:"email" gorm:"unique;not null"`
 	Password       string  `json:"password" gorm:"not null"`
-	AccountNumber  uint64  `json:"account_number" gorm:"uniqueIndex;not null"`
+	AccountNumber   uint64  `json:"account_number" gorm:"unique;not null"`
 	Phonenumber    *uint64 `json:"phone_number,omitempty"`
-	CurrentBalance float64 `json:"current_balance" gorm:"default:0"`
+	AccountBalance  float64 `json:"account_balance,omitempty"` // optional field for balance
+	//removed balance to put in seperate account model in transfer.go models
 }
 
 type SignUpRequest struct {

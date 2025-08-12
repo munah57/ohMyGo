@@ -149,3 +149,12 @@ func (h *UserHandler) GetUserByEmail(c *gin.Context) {
     user.Password = "" // hide password
     c.JSON(http.StatusOK, user)
 }
+
+func (h *UserHandler) LogoutUser(c *gin.Context) {
+    err := h.Service.LogoutUser(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}

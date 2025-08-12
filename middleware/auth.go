@@ -90,6 +90,26 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		claims, ok:= token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
+			c.Abort()
+			return
+		}
+
+		userIDFloat, ok := claims["user_id"].(float64)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found  in token"})
+			c.Abort()
+			return
+		}
+
+		email, ok := claims["email"].(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found  in token"})
+			c.Abort()
+			return
+		}
 
 		// Continue processing the request
 		c.Set("user_id", uint(userIDFloat))

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 	"vaqua/models"
 	"vaqua/services"
 
@@ -22,28 +21,26 @@ func (h *TransferHandler) CreateTransfer(c *gin.Context) {
 	}
 
 	// Get user ID from context (set in middleware)
-	userIDStr, exists := c.Get("user_id")
+	userIDCon, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
-	// userIDStr is interface{}, assert it to string
-	userIDStrVal, ok := userIDStr.(string)
+	// type is asserted as uint 
+	userID, ok := userIDCon.(uint) //check userID is of type uint
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID in context is not a string"})
-		return
+		//try floating
+		userIDFloat, ok := userIDCon.(float64)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID has invalid type"})
+			return
+		}
+		userID = uint(userIDFloat)
 	}
 
-	// Convert userID string to uint64
-	userID, err := strconv.ParseUint(userIDStrVal, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	// Call service to perform transfer
-	err = h.Service.TransferFunds(uint(userID), request)
+	// call service
+	err := h.Service.TransferFunds(userID, &request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

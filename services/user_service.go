@@ -43,42 +43,59 @@ func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
 	}
 
 	// Generate user account number
-	for attempts := 0; attempts < 5; attempts++ {
-		accNum := utils.GenerateRandomAccNum()
-		fmt.Printf("Attempt %d: Generated Account Number = %d\n", attempts+1, accNum)
+	//ammend to create user account for both user and account table in string format
 
-		exists, err := s.Repo.CheckAccNumExists(uint(accNum))
+	for attempts := 0; attempts < 5; attempts++ {
+		accNumStr := utils.GenerateRandomAccNumAsString()
+
+		exists, err := s.Repo.CheckAccNumExists(accNumStr)
 		if err != nil {
 			fmt.Println("Error checking if account number exists:", err)
 			return err
 		}
 
 		if !exists {
-			user.AccountNumber = uint64(accNum)
-			fmt.Println("Unique Account Number assigned:", accNum)
+			user.AccountNumber = accNumStr
+			fmt.Println("unique Account Number assigned:", accNumStr)
 			break
-			} else {
-				fmt.Println("Account Number already exists. Retrying...")
+		} else {
+			fmt.Println("account Number already exists. Retrying...")
 		}
 	}
 
-	if user.AccountNumber == 0 {
-		fmt.Println("Failed to generate a unique account number")
-		return errors.New("A unique account number could not be generated")
+	if user.AccountNumber == "" {
+		fmt.Println("failed to generate account number")
+		return errors.New("account number could not be generated")
 	}
 
+	fmt.Printf("saving new user: Email = %s | AccountNumber = %s\n", user.Email, user.AccountNumber)
 
-	fmt.Printf("Saving new user: Email = %s | AccountNumber = %d\n", user.Email, user.AccountNumber)
+	if user.AccountNumber == "" {
+		fmt.Println("failed to generate account number")
+		return errors.New("account number could not be generated")
+	}
 
+	fmt.Printf("saving new user: Email = %s | AccountNumber = %s\n", user.Email, user.AccountNumber)
 
-
-	err = s.Repo.CreateNewUser(user)
-	if err != nil {
+//saving the user to the database
+	if err := s.Repo.CreateNewUser(user); err != nil {
 		fmt.Println("Error saving user:", err)
 		return err
 	}
 
 
+//create record linked to user
+	account := models.Account{
+		UserID:        user.ID,
+		AccountNumber: user.AccountNumber,
+		Balance:       0,
+	}
+	if err := repository.NewTransferRepo().CreateAccount(&account); err != nil {
+		fmt.Println("Error creating account for user:", err)
+		return err
+	}
+
+	//initialise the NewTransferRepo in repo layer to add it here 
 	fmt.Println("User saved successfully to DB!")
 	fmt.Println("Service: Finished SignUpNewUserAcct successfully")
 	return nil

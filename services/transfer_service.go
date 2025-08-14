@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"vaqua/models"
 	"vaqua/repository"
+	"gorm.io/gorm"
 )
 
 type TransferService interface {
@@ -52,28 +53,41 @@ func (s *TransferServices) TransferFunds(senderUserID uint, request *models.Tran
 		return errors.New("insufficient balance")
 	}
 
-	// deduct amount from sender's balance and add to recipient's balance
 	fmt.Printf("Transferring %.2f from %s to %s\n", request.Amount, senderAcc.AccountNumber, recipientAcc.AccountNumber)
-	senderAcc.Balance -= request.Amount
-	recipientAcc.Balance += request.Amount
 
-	// Save updated sender account balance
-	err = s.Repo.UpdateAccount(senderAcc)
-	if err != nil {
-		return errors.New("failed to update sender account balance")
-	}
-
-	// Save updated recipient account balance
-	err = s.Repo.UpdateAccount(recipientAcc)
-	if err != nil {
-		return errors.New("failed to update recipient account balance")
-	}
-
-	// Create transfer transaction record
-	err = s.Repo.CreateTransfer(senderAcc.ID, recipientAcc.ID, request.Amount, request.Description)
-	if err != nil {
-		return fmt.Errorf("failed to create transfer transaction: %w", err)
+	// Save updated recipient account balance via atomic transaction logic
+	if err := s.executeTransferTransaction(senderAcc, recipientAcc, request); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+
+//atomic transfer transaction
+// actual transfer logic is handled here via a transaction repo method
+// here both the sender and recipient account updates are atomic compared to normal service one which would update the sender account and then the recipient account
+//here if one fails, it rolls back the changes made to both accounts
+
+func (s *TransferServices) executeTransferTransaction(senderAcc, recipientAcc *models.Account, request *models.TransferRequest) error {
+	return s.Repo.WithTransaction(func(txRepo *repository.TransferRepo, tx *gorm.DB) error {  //with transaction method in repo layer
+		senderAcc.Balance -= request.Amount
+		recipientAcc.Balance += request.Amount
+
+		if err := txRepo.UpdateAccount(senderAcc, tx); err != nil {
+			return errors.New("failed to update sender account balance")
+		}
+
+		if err := txRepo.UpdateAccount(recipientAcc, tx); err != nil {
+			return errors.New("failed to update recipient account balance")
+		}
+
+
+		// Create transfer transaction record
+		if err := txRepo.CreateTransfer(senderAcc.ID, recipientAcc.ID, request.Amount, request.Description, tx); err != nil {
+			return fmt.Errorf("failed to create transfer transaction: %w", err)
+		}
+
+		return nil
+	})
 }

@@ -84,7 +84,7 @@ func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
 	}
 
 
-//create record linked to user
+//create record linked to user when they sign up
 	account := models.Account{
 		UserID:        user.ID,
 		AccountNumber: user.AccountNumber,

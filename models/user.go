@@ -21,6 +21,7 @@ type Account struct {
 	AccountNumber string  `json:"account_number" gorm:"uniqueIndex;not null"` // is a string
 	Balance       float64  `json:"balance" gorm:"not null;default:0"`
 }
+
 type SignUpRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`

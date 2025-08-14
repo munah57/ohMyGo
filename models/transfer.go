@@ -3,9 +3,9 @@ package models
 
 
 type TransferRequest struct {
-	RecipientAcc string  `json:"recipient_account" binding:"required"`  //recipient's account number
+	RecipientAcc string  `json:"recipient_account" binding:"required,len=10"`  //we bind to the recipient's account number 
 	Amount       float64 `json:"amount" binding:"required,gt=0"`
-	Description  string  `json:"description"`
+	Description  string  `json:"description" binding:"max=255"`
 }
 
 

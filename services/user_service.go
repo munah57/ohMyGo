@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 	"vaqua/middleware"
@@ -21,17 +20,13 @@ type UserService struct {
 }
 
 func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
-	fmt.Println("Service: Starting SignUpNewUserAcct...")
-	_, err := s.Repo.GetNewUserByEmail(newUser.Email)
-	if err == nil {
-		fmt.Println("Email already in use:", newUser.Email)
-		return errors.New("This email is already in use")
-		
+		_, err := s.Repo.GetUserByEmail(newUser.Email)
+	if err == nil {	
+		return errors.New("This email is already in use")	
 	}
 
 	hashpass, err := utils.HashPassword(newUser.Password)
 	if err != nil {
-		fmt.Println("Error hashing password:", err)
 		return err
 	}
 
@@ -51,10 +46,15 @@ func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
 		exists, err := s.Repo.CheckAccNumExists(accNumStr)
 		if err != nil {
 			fmt.Println("Error checking if account number exists:", err)
+		accNum := utils.GenerateRandomAccNum()
+		exists, err := s.Repo.CheckAccNumExists(uint(accNum))
+		if err != nil {	
+
 			return err
 		}
 
 		if !exists {
+
 			user.AccountNumber = accNumStr
 			fmt.Println("unique Account Number assigned:", accNumStr)
 			break
@@ -66,9 +66,19 @@ func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
 	if user.AccountNumber == "" {
 		fmt.Println("failed to generate account number")
 		return errors.New("account number could not be generated")
+
+			user.AccountNumber = uint64(accNum)	
+			break	
+		}
+	}
+
+	if user.AccountNumber == 0 {	
+		return errors.New("A unique account number could not be generated")
+
 	}
 
 	fmt.Printf("saving new user: Email = %s | AccountNumber = %s\n", user.Email, user.AccountNumber)
+
 
 	if user.AccountNumber == "" {
 		fmt.Println("failed to generate account number")
@@ -98,13 +108,17 @@ func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
 	//initialise the NewTransferRepo in repo layer to add it here 
 	fmt.Println("User saved successfully to DB!")
 	fmt.Println("Service: Finished SignUpNewUserAcct successfully")
-	return nil
 
+	err = s.Repo.CreateNewUser(user)
+	if err != nil {	
+		return err
+	}
+
+	return nil
 }
 
-
 func (s *UserService) LoginUser(request models.LoginRequest) (string, error) {
-    user, err := s.Repo.GetNewUserByEmail(request.Email)
+    user, err := s.Repo.GetUserByEmail(request.Email)
     if err !=nil {
         return "", err
     }
@@ -112,14 +126,46 @@ func (s *UserService) LoginUser(request models.LoginRequest) (string, error) {
     if err != nil {
         return "", err
     }
-    token, err := middleware.GenerateJWT(user.ID)
+    token, err := middleware.GenerateJWT(user.ID, user.Email)
     if err != nil {
         return "", err
     }
     return token, nil 
 }
 
+func (s *UserService) GetUserByID(id uint) (*models.User, error) {
+	return s.Repo.GetUserByID(id)
+}
 
+func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
+	return s.Repo.GetUserByEmail(email)
+}
+
+func (s *UserService) UpdateUserProfile(userID uint, updateUser *models.UpdateProfileRequest) (*models.User, error) {
+	// get existing user
+	user, err := s.Repo.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// update required fields 
+	if *updateUser.Firstname != "" {
+		user.Firstname= updateUser.Firstname
+	}
+	if *updateUser.Lastname != "" {
+		user.Lastname = updateUser.Lastname
+	}
+	if *updateUser.Phonenumber != "" {
+		user.Phonenumber = updateUser.Phonenumber
+	}
+
+	// save changes
+	if err := s.Repo.UpdateUserProfile(user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
 //LOG OUT USER
 func (s *UserService) LogoutUser(c *gin.Context) error {
 	

@@ -20,6 +20,10 @@ type Account struct {
 	UserID        uint     `json:"-" gorm:"not null"` // Foreign key to User
 	AccountNumber string  `json:"account_number" gorm:"uniqueIndex;not null"` // is a string
 	Balance       float64  `json:"balance" gorm:"not null;default:0"`
+	AccountNumber  uint64  `json:"account_number" gorm:"uniqueIndex;not null"`
+	Phonenumber    *string `json:"phone_number,omitempty"`
+	CurrentBalance float64 `json:"current_balance" gorm:"default:0"`
+
 }
 
 type SignUpRequest struct {
@@ -36,5 +40,6 @@ type UpdateProfileRequest struct {
 	Firstname   *string `json:"firstname" binding:"required"`
 	Lastname    *string `json:"lastname" binding:"required"`
 	Phonenumber *uint `json:"phone_number" binding:"required,min=10000000000,max=99999999999999"`
+
 }
 

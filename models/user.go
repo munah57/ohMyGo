@@ -20,7 +20,6 @@ type Account struct {
 	UserID        uint     `json:"-" gorm:"not null"` // Foreign key to User
 	AccountNumber string  `json:"account_number" gorm:"uniqueIndex;not null"` // is a string
 	Balance       float64  `json:"balance" gorm:"not null;default:0"`
-	AccountNumber  uint64  `json:"account_number" gorm:"uniqueIndex;not null"`
 	Phonenumber    *string `json:"phone_number,omitempty"`
 	CurrentBalance float64 `json:"current_balance" gorm:"default:0"`
 

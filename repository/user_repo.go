@@ -11,8 +11,6 @@ type UserRepository interface {
 	GetUserByEmail(email string) (*models.User, error)
 	CreateNewUser(user *models.User) error
 	CheckAccNumExists(accountNumber string) (bool, error)
-
-	CheckAccNumExists(accountNumber uint) (bool, error)
 	GetUserByID(id uint) (*models.User, error)
 	UpdateUserProfile(user *models.User) error
 

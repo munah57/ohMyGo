@@ -2,6 +2,8 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"strings"
 	"time"
 	"vaqua/middleware"
@@ -9,7 +11,6 @@ import (
 	"vaqua/redis"
 	"vaqua/repository"
 	"vaqua/utils"
-	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -20,81 +21,45 @@ type UserService struct {
 }
 
 func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
-		_, err := s.Repo.GetUserByEmail(newUser.Email)
-	if err == nil {	
-		return errors.New("This email is already in use")	
+	// Check if email already exists
+	_, err := s.Repo.GetUserByEmail(newUser.Email)
+	if err == nil {
+		return errors.New("this email is already in use")
 	}
 
+	// Hash password
 	hashpass, err := utils.HashPassword(newUser.Password)
 	if err != nil {
 		return err
 	}
-
 	newUser.Password = hashpass
 
+	// Prepare new user
 	user := &models.User{
-		Email: newUser.Email,
+		Email:    newUser.Email,
 		Password: hashpass,
 	}
 
-	// Generate user account number
-	//ammend to create user account for both user and account table in string format
-
-	for attempts := 0; attempts < 5; attempts++ {
-		accNumStr := utils.GenerateRandomAccNumAsString()
-
-		exists, err := s.Repo.CheckAccNumExists(accNumStr)
-		if err != nil {
-			fmt.Println("Error checking if account number exists:", err)
-		accNum := utils.GenerateRandomAccNum()
-		exists, err := s.Repo.CheckAccNumExists(uint(accNum))
-		if err != nil {	
-
-			return err
-		}
-
-		if !exists {
-
-			user.AccountNumber = accNumStr
-			fmt.Println("unique Account Number assigned:", accNumStr)
-			break
-		} else {
-			fmt.Println("account Number already exists. Retrying...")
-		}
+	// Generate unique account number (string format)
+	accNumStr := utils.GenerateRandomAccNumAsString()
+	exists, err := s.Repo.CheckAccNumExists(accNumStr)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return errors.New("account number already exists, please try again")
 	}
 
-	if user.AccountNumber == "" {
-		fmt.Println("failed to generate account number")
-		return errors.New("account number could not be generated")
+	user.AccountNumber = accNumStr
+	fmt.Printf("Saving new user: Email = %s | AccountNumber = %s\n", user.Email, user.AccountNumber)
 
-			user.AccountNumber = uint64(accNum)	
-			break	
-		}
-	}
-
-	if user.AccountNumber == 0 {	
-		return errors.New("A unique account number could not be generated")
-
-	}
-
-	fmt.Printf("saving new user: Email = %s | AccountNumber = %s\n", user.Email, user.AccountNumber)
-
-
-	if user.AccountNumber == "" {
-		fmt.Println("failed to generate account number")
-		return errors.New("account number could not be generated")
-	}
-
-	fmt.Printf("saving new user: Email = %s | AccountNumber = %s\n", user.Email, user.AccountNumber)
-
-//saving the user to the database
+	// Save user
 	if err := s.Repo.CreateNewUser(user); err != nil {
 		fmt.Println("Error saving user:", err)
 		return err
 	}
 
-
-//create record linked to user when they sign up
+	// Create linked account record
 	account := models.Account{
 		UserID:        user.ID,
 		AccountNumber: user.AccountNumber,
@@ -105,17 +70,11 @@ func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
 		return err
 	}
 
-	//initialise the NewTransferRepo in repo layer to add it here 
 	fmt.Println("User saved successfully to DB!")
 	fmt.Println("Service: Finished SignUpNewUserAcct successfully")
-
-	err = s.Repo.CreateNewUser(user)
-	if err != nil {	
-		return err
-	}
-
 	return nil
 }
+
 
 func (s *UserService) LoginUser(request models.LoginRequest) (string, error) {
     user, err := s.Repo.GetUserByEmail(request.Email)
@@ -155,7 +114,7 @@ func (s *UserService) UpdateUserProfile(userID uint, updateUser *models.UpdatePr
 	if *updateUser.Lastname != "" {
 		user.Lastname = updateUser.Lastname
 	}
-	if *updateUser.Phonenumber != "" {
+	if *updateUser.Phonenumber != 0 {
 		user.Phonenumber = updateUser.Phonenumber
 	}
 

@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handler.TransferRequestHandler, transactionHandler *handler.TransactionHandler, db *gorm.DB) *gin.Engine {
+func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handler.TransferHandler, transactionHandler *handler.TransactionHandler, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
 	auth := r.Group("/")
@@ -37,6 +37,14 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 	// r.GET("/user", userHandler.GetUserByEmail)
 
 
+
+
+	//  Authenticated user routes updated
+	authorized := r.Group("/")
+	authorized.Use(middleware.AuthMiddleware())
+	
+	authorized.POST("/logout", userHandler.LogoutUser)
+	authorized.POST("/transfer", transferRequestHandler.CreateTransfer)
 
 	//  Authenticated user routes
 	auth.Use(middleware.AuthMiddleware())

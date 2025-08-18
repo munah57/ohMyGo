@@ -13,7 +13,7 @@ type TransactionHandler struct {
 	Service *services.TransactionService
 }
 
-// POST /transactions  (body: { "type": "expense"|"income", "amount": 12.34, "description": "Food" })
+// POST 
 func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	var tx models.Transaction
 	if err := c.ShouldBindJSON(&tx); err != nil {
@@ -44,7 +44,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	c.JSON(http.StatusCreated, tx)
 }
 
-// GET /expenses?period=1m|6m|1y   (list of expense transactions)
+// GET 
 func (h *TransactionHandler) GetExpenses(c *gin.Context) {
 	uidAny, ok := c.Get("user_id")
 	if !ok {
@@ -71,7 +71,7 @@ func (h *TransactionHandler) GetExpenses(c *gin.Context) {
 	c.JSON(http.StatusOK, expenses)
 }
 
-// GET /expenses/summary?period=1m|6m|1y   (grouped totals for charts)
+// GET 
 func (h *TransactionHandler) GetExpenseSummary(c *gin.Context) {
 	uidAny, ok := c.Get("user_id")
 	if !ok {
@@ -98,7 +98,7 @@ func (h *TransactionHandler) GetExpenseSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, rows)
 }
 
-// helper
+// Helper
 func parsePeriod(p string) (time.Time, bool) {
 	switch p {
 	case "1m":

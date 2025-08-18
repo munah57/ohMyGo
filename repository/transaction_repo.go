@@ -35,7 +35,7 @@ func (r *TransactionRepo) GetExpensesByUser(userID uint, fromDate time.Time) ([]
 	return expenses, nil
 }
 
-// Group and sum expenses by description (works as “category”)
+
 func (r *TransactionRepo) GetExpenseSummaryByUser(userID uint, fromDate time.Time) ([]ExpenseSummary, error) {
 	var rows []ExpenseSummary
 	q := db.Db.Model(&models.Transaction{}).

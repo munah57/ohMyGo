@@ -48,6 +48,10 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 	authorized.GET("/user/id/me", userHandler.GetUserByID)
 	authorized.GET("/user/email/me", userHandler.GetUserByEmail)
 
+	authorized.POST("/transactions", transactionHandler.CreateTransaction)
+    authorized.GET("/expenses", transactionHandler.GetExpenses)
+    authorized.GET("/expenses/summary", transactionHandler.GetExpenseSummary)
+
 
 	return r
 

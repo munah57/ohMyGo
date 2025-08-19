@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"time"
+	"strconv"
 	"vaqua/models"
 	"vaqua/services"
 
@@ -13,7 +13,7 @@ type TransactionHandler struct {
 	Service *services.TransactionService
 }
 
-// POST 
+
 func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	var tx models.Transaction
 	if err := c.ShouldBindJSON(&tx); err != nil {
@@ -28,24 +28,31 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	}
 	tx.UserID = uidAny.(uint)
 
-	if tx.Type != "expense" && tx.Type != "income" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "type must be 'expense' or 'income'"})
-		return
-	}
-	if tx.Amount <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "amount must be > 0"})
-		return
-	}
-
-	if err := h.Service.CreateTransaction(&tx); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create transaction"})
-		return
-	}
-	c.JSON(http.StatusCreated, tx)
+	
+	if tx.Type == "" {
+    c.JSON(http.StatusBadRequest, gin.H{"error": "transaction type is required"})
+    return
+}
+if tx.Amount <= 0 {
+    c.JSON(http.StatusBadRequest, gin.H{"error": "amount must be greater than 0"})
+    return
 }
 
-// GET 
-func (h *TransactionHandler) GetExpenses(c *gin.Context) {
+
+if tx.Status == "" {
+    tx.Status = "pending"
+}
+
+if err := h.Service.CreateTransaction(&tx); err != nil {
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create transaction"})
+    return
+}
+c.JSON(http.StatusCreated, tx)
+
+}
+
+
+func (h *TransactionHandler) GetAllTransactions(c *gin.Context) {
 	uidAny, ok := c.Get("user_id")
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
@@ -53,63 +60,18 @@ func (h *TransactionHandler) GetExpenses(c *gin.Context) {
 	}
 	userID := uidAny.(uint)
 
-	fromDate, bad := parsePeriod(c.Query("period"))
-	if bad {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid period; use 1m, 6m, or 1y"})
-		return
-	}
+	
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
-	expenses, err := h.Service.GetExpensesByUser(userID, fromDate)
+	transactions, err := h.Service.GetAllTransactions(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch expenses"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch transactions"})
 		return
 	}
-	if len(expenses) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"message": "no expenses found"})
+	if len(transactions) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "no transactions found"})
 		return
 	}
-	c.JSON(http.StatusOK, expenses)
-}
-
-// GET 
-func (h *TransactionHandler) GetExpenseSummary(c *gin.Context) {
-	uidAny, ok := c.Get("user_id")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-	userID := uidAny.(uint)
-
-	fromDate, bad := parsePeriod(c.Query("period"))
-	if bad {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid period; use 1m, 6m, or 1y"})
-		return
-	}
-
-	rows, err := h.Service.GetExpenseSummaryByUser(userID, fromDate)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch expense summary"})
-		return
-	}
-	if len(rows) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"message": "no expense summary for this period"})
-		return
-	}
-	c.JSON(http.StatusOK, rows)
-}
-
-// Helper
-func parsePeriod(p string) (time.Time, bool) {
-	switch p {
-	case "1m":
-		return time.Now().AddDate(0, -1, 0), false
-	case "6m":
-		return time.Now().AddDate(0, -6, 0), false
-	case "1y":
-		return time.Now().AddDate(-1, 0, 0), false
-	case "", "all":
-		return time.Time{}, false // zero time = no filter
-	default:
-		return time.Time{}, true
-	}
+	c.JSON(http.StatusOK, transactions)
 }

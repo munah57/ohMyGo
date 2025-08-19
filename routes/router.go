@@ -36,6 +36,7 @@ func SetupRouter(
 	r.POST("/signup", userHandler.SignUpNewUserAcct)
 	r.POST("/login", userHandler.LoginUser)
 
+
 	// Authenticated routes
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())

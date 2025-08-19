@@ -38,17 +38,37 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 
 
 
-	//  Authenticated user routes updated
+	//  Authenticated user routes clean up
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())
 	
-	authorized.POST("/logout", userHandler.LogoutUser)
-	authorized.POST("/transfer", transferRequestHandler.CreateTransfer)
-	authorized.PATCH("/profile", userHandler.UpdateUserProfile)
-	authorized.GET("/user/id/me", userHandler.GetUserByID)
-	authorized.GET("/user/email/me", userHandler.GetUserByEmail)
 
 
+	//user routes
+
+	userRoutes := authorized.Group("/user")
+	{
+	userRoutes.POST("/logout", userHandler.LogoutUser)
+	userRoutes.PATCH("/profile", userHandler.UpdateUserProfile)
+	userRoutes.GET("/id/me", userHandler.GetUserByID)
+	userRoutes.GET("email/me", userHandler.GetUserByEmail)
+	}
+
+	//transfer routes 
+	transferRoutes := authorized.Group("/transfer")
+
+	{
+	transferRoutes.POST("/transfer", transferRequestHandler.CreateTransfer)
+	}
+
+	//dashboard routes
+
+	dashboardRoutes := authorized.Group("/dashboard")
+	{
+		dashboardRoutes.GET("/income", transactionHandler.GetUserIncome)
+		//need one for the expense and balance 
+
+	}
 	return r
 
 }

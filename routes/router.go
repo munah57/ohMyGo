@@ -5,17 +5,20 @@ import (
 	"vaqua/middleware"
 
 	"github.com/gin-gonic/gin"
-
 	"gorm.io/gorm"
 )
 
-func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handler.TransferHandler, transactionHandler *handler.TransactionHandler, db *gorm.DB) *gin.Engine {
+func SetupRouter(
+	userHandler *handler.UserHandler,
+	transferRequestHandler *handler.TransferHandler,
+	transactionHandler *handler.TransactionHandler,
+	db *gorm.DB,
+) *gin.Engine {
 	r := gin.Default()
-
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
-		sqlDB, err:= db.DB()
+		sqlDB, err := db.DB()
 		if err != nil {
 			c.JSON(500, gin.H{"status": "unhealthy", "error": err.Error()})
 			return
@@ -29,22 +32,26 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 		c.JSON(200, gin.H{"status": "healthy", "db": "connected to database"})
 	})
 
-	// public routes
+	// Public routes
 	r.POST("/signup", userHandler.SignUpNewUserAcct)
 	r.POST("/login", userHandler.LoginUser)
-	
 
-	//  Authenticated user routes updated
+
+	// Authenticated routes
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())
-	
+
 	authorized.POST("/logout", userHandler.LogoutUser)
 	authorized.POST("/transfer", transferRequestHandler.CreateTransfer)
 	authorized.PATCH("/profile", userHandler.UpdateUserProfile)
 	authorized.GET("/user/id/me", userHandler.GetUserByID)
 	authorized.GET("/user/email/me", userHandler.GetUserByEmail)
 
+	// Transactions
+	authorized.POST("/transactions", transactionHandler.CreateTransaction)
+	authorized.GET("/transactions", transactionHandler.GetAllTransactions) 
+
+	
 
 	return r
-
 }

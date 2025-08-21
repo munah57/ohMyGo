@@ -76,20 +76,20 @@ func (s *UserService) SignUpNewUserAcct(newUser *models.SignUpRequest) error {
 }
 
 
-func (s *UserService) LoginUser(request models.LoginRequest) (string, error) {
+func (s *UserService) LoginUser(request models.LoginRequest) (*models.User, string, error) {
     user, err := s.Repo.GetUserByEmail(request.Email)
     if err !=nil {
-        return "", err
+        return nil, "", err
     }
     err = utils.ComparePassword(user.Password, request.Password)
     if err != nil {
-        return "", err
+        return nil, "", err
     }
     token, err := middleware.GenerateJWT(user.ID, user.Email)
     if err != nil {
-        return "", err
+        return nil, "", err
     }
-    return token, nil 
+    return user, token, nil 
 }
 
 func (s *UserService) GetUserByID(id uint) (*models.User, error) {
@@ -125,6 +125,8 @@ func (s *UserService) UpdateUserProfile(userID uint, updateUser *models.UpdatePr
 
 	return user, nil
 }
+
+
 //LOG OUT USER
 func (s *UserService) LogoutUser(c *gin.Context) error {
 	

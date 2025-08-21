@@ -51,3 +51,10 @@ func main() {
 	r.Run(":8080")
 
 }
+
+
+//todo 
+// 1. finish gettransaction and gettransaction by id in this branch (dashboard_income)- test endpoint - git add . - git commit
+// 2. checkout to a new branch from this branch (git checkout -b 'branchname')- git push
+// 3. go to github create a PR from the new branch to main 
+

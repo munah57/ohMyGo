@@ -12,10 +12,9 @@ import (
 func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handler.TransferHandler, transactionHandler *handler.TransactionHandler, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
-
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
-		sqlDB, err:= db.DB()
+		sqlDB, err := db.DB()
 		if err != nil {
 			c.JSON(500, gin.H{"status": "unhealthy", "error": err.Error()})
 			return
@@ -32,42 +31,44 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 	// public routes
 	r.POST("/signup", userHandler.SignUpNewUserAcct)
 	r.POST("/login", userHandler.LoginUser)
-	// r.GET("/user/:id", userHandler.GetUserByID)
-	// r.GET("/user", userHandler.GetUserByEmail)
-
-
-
+	
 
 	//  Authenticated user routes clean up
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())
-	
-
 
 	//user routes
 
 	userRoutes := authorized.Group("/user")
 	{
-	userRoutes.POST("/logout", userHandler.LogoutUser)
-	userRoutes.PATCH("/profile", userHandler.UpdateUserProfile)
-	userRoutes.GET("/id/me", userHandler.GetUserByID)
-	userRoutes.GET("email/me", userHandler.GetUserByEmail)
+		userRoutes.POST("/logout", userHandler.LogoutUser)
+		userRoutes.PATCH("/profile", userHandler.UpdateUserProfile)
+		userRoutes.GET("/id/me", userHandler.GetUserByID)
+		userRoutes.GET("/email/me", userHandler.GetUserByEmail)
 	}
 
-	//transfer routes 
+	//transfer routes
 	transferRoutes := authorized.Group("/transfer")
 
 	{
-	transferRoutes.POST("/transfer", transferRequestHandler.CreateTransfer)
+		transferRoutes.POST("/transfer", transferRequestHandler.CreateTransfer)
 	}
 
+	// Transactions
+	
+	authorized.GET("/transactions", transactionHandler.GetAllTransactions) 
+	
 	//dashboard routes
 
 	dashboardRoutes := authorized.Group("/dashboard")
 	{
 		dashboardRoutes.GET("/income", transactionHandler.GetUserIncome)
-		//need one for the expense and balance 
-
+		dashboardRoutes.GET("/expenses", transactionHandler.GetUserExpenses)
+		dashboardRoutes.GET("/balance", transactionHandler.GetBalance)
+		dashboardRoutes.GET("/transactions", transactionHandler.GetAllTransactions)
+		dashboardRoutes.GET("/transaction/:id", transactionHandler.GetTransaction)
+		dashboardRoutes.POST("/transfer", transferRequestHandler.CreateTransfer)
+		
 	}
 	return r
 

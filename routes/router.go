@@ -35,23 +35,45 @@ func SetupRouter(
 	// Public routes
 	r.POST("/signup", userHandler.SignUpNewUserAcct)
 	r.POST("/login", userHandler.LoginUser)
+	
 
-
-	// Authenticated routes
+	//  Authenticated user routes clean up
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())
 
-	authorized.POST("/logout", userHandler.LogoutUser)
-	authorized.POST("/transfer", transferRequestHandler.CreateTransfer)
-	authorized.PATCH("/profile", userHandler.UpdateUserProfile)
-	authorized.GET("/user/id/me", userHandler.GetUserByID)
-	authorized.GET("/user/email/me", userHandler.GetUserByEmail)
+	//user routes
+
+	userRoutes := authorized.Group("/user")
+	{
+		userRoutes.POST("/logout", userHandler.LogoutUser)
+		userRoutes.PATCH("/profile", userHandler.UpdateUserProfile)
+		userRoutes.GET("/id/me", userHandler.GetUserByID)
+		userRoutes.GET("/email/me", userHandler.GetUserByEmail)
+	}
+
+	//transfer routes
+	transferRoutes := authorized.Group("/transfer")
+
+	{
+		transferRoutes.POST("/transfer", transferRequestHandler.CreateTransfer)
+	}
 
 	// Transactions
-	authorized.POST("/transactions", transactionHandler.CreateTransaction)
-	authorized.GET("/transactions", transactionHandler.GetAllTransactions) 
-
 	
+	authorized.GET("/transactions", transactionHandler.GetAllTransactions) 
+	
+	//dashboard routes
 
+	dashboardRoutes := authorized.Group("/dashboard")
+	{
+		dashboardRoutes.GET("/income", transactionHandler.GetUserIncome)
+		dashboardRoutes.GET("/expenses", transactionHandler.GetUserExpenses)
+		dashboardRoutes.GET("/balance", transactionHandler.GetBalance)
+		dashboardRoutes.GET("/transactions", transactionHandler.GetAllTransactions)
+		dashboardRoutes.GET("/transaction/:id", transactionHandler.GetTransaction)
+		dashboardRoutes.POST("/transfer", transferRequestHandler.CreateTransfer)
+		
+	}
+  
 	return r
 }

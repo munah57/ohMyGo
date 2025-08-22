@@ -1,22 +1,66 @@
 package repository
 
 import (
+	
+	"time"
+
 	"vaqua/db"
 	"vaqua/models"
 )
 
 
-type TransactionRepository interface {
-	CreateTransaction(tx *models.Transaction) error
-	GetAllTransactionsByUser(userID uint, limit int, offset int) ([]models.Transaction, error)
-}
-
 type TransactionRepo struct{}
 
-func (r *TransactionRepo) CreateTransaction(tx *models.Transaction) error {
-	return db.Db.Create(tx).Error
+type TransactionRepository interface {
+	GetIncomeByPeriod(userID uint, start, end time.Time) ([]models.Transaction, error)
+	GetExpensesByPeriod(userID uint, start, end time.Time) ([]models.Transaction, error)
+	GetUserBalanceByID(userID uint) (float64, error)
+	GetAllTransactionsByUser(userID uint, limit int, offset int) ([]models.Transaction, error)
+	GetTransactionsByUserID(userID uint) ([]models.Transaction, error)
 }
 
+
+
+func (r *TransactionRepo) GetIncomeByPeriod(userID uint, start, end time.Time) ([]models.Transaction, error) {
+	now := time.Now()
+	if start.IsZero() {
+		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		end = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+		
+	}
+
+    var incomes []models.Transaction
+    err := db.Db.Where("user_id = ? AND type = ? AND created_at BETWEEN ? AND ?", userID, "income", start, end).
+        Find(&incomes).Error
+
+    return incomes, err
+}
+
+func (r *TransactionRepo) GetExpensesByPeriod(userID uint, start, end time.Time) ([]models.Transaction, error) {
+	now := time.Now()
+	if start.IsZero() {
+		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		end = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+		
+	}
+
+	var expenses []models.Transaction
+	err := db.Db.Debug().Where("user_id = ? AND type = ? AND created_at BETWEEN ? AND ?", userID, "expense", start, end).
+	Find(&expenses).Error
+
+	return expenses, err
+
+}
+
+
+func (r *TransactionRepo) GetUserBalanceByID(userID uint) (float64, error) {
+    var user models.Account
+    err := db.Db.Select("balance").Where("user_id = ?", userID).First(&user).Error
+    if err != nil {
+        return 0, err
+    }
+    return user.Balance, nil
+}
 
 func (r *TransactionRepo) GetAllTransactionsByUser(userID uint, limit int, offset int) ([]models.Transaction, error) {
 	var txs []models.Transaction
@@ -36,4 +80,13 @@ func (r *TransactionRepo) GetAllTransactionsByUser(userID uint, limit int, offse
 		return nil, err
 	}
 	return txs, nil
+}
+
+func (r *TransactionRepo) GetTransactionByUserID(userID uint) (models.Transaction, error) {
+	var transaction models.Transaction
+	err := db.Db.Where("user_id", userID).Find(&transaction).Error
+	if err!= nil {
+		return models.Transaction{}, err
+	}
+	return transaction, nil 
 }

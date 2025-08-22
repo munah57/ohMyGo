@@ -1,55 +1,99 @@
 package handler
 
 import (
+	"log"
 	"net/http"
-	"strconv"
-	"vaqua/models"
+	"time"
 	"vaqua/services"
 
+	"strconv"
+
 	"github.com/gin-gonic/gin"
-)
+) 
+	
+
 
 type TransactionHandler struct {
 	Service *services.TransactionService
 }
 
 
-func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
-	var tx models.Transaction
-	if err := c.ShouldBindJSON(&tx); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (h *TransactionHandler) GetUserIncome(c *gin.Context) {
+    // userID := c.GetUint("userID") // from auth middleware
+	uidAny, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
+	userID := uidAny.(uint)
+
+    // Placeholder times (no date filtering)
+    var start, end time.Time
+
+    income, _, err := h.Service.GetIncomeByPeriod(userID, start, end)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch income"})
+        return
+    }
+
+    if len(income) == 0 {
+        c.JSON(http.StatusNotFound, gin.H{"message": "no transactions found for this period"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"income": income})
+
+}
+
+func (h *TransactionHandler) GetUserExpenses( c*gin.Context) {
+	// userID := c.GetUint("userID") 
+
 
 	uidAny, ok := c.Get("user_id")
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-	tx.UserID = uidAny.(uint)
 
-	
-	if tx.Type == "" {
-    c.JSON(http.StatusBadRequest, gin.H{"error": "transaction type is required"})
-    return
-}
-if tx.Amount <= 0 {
-    c.JSON(http.StatusBadRequest, gin.H{"error": "amount must be greater than 0"})
-    return
-}
+	userID := uidAny.(uint)
 
+	var start, end time.Time
 
-if tx.Status == "" {
-    tx.Status = "pending"
-}
+    expenses, _, err := h.Service.GetExpensesByPeriod(userID, start, end)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch expenses"})
+        return
+    }
 
-if err := h.Service.CreateTransaction(&tx); err != nil {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create transaction"})
-    return
-}
-c.JSON(http.StatusCreated, tx)
+    if len(expenses) == 0 {
+        c.JSON(http.StatusNotFound, gin.H{"message": "no expenses found for this period"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"expenses": expenses})
 
 }
+
+func (h *TransactionHandler) GetBalance(c *gin.Context) {
+
+    // userID := c.GetUint("userID") 
+	uidAny, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userID := uidAny.(uint)
+
+    balance, err := h.Service.GetUserBalance(userID)
+    if err != nil {
+		log.Printf("Error calculating balance for user %d: %v", userID, err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "could not calculate balance"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"balance": balance})
+}
+
 
 
 func (h *TransactionHandler) GetAllTransactions(c *gin.Context) {
@@ -74,4 +118,31 @@ func (h *TransactionHandler) GetAllTransactions(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, transactions)
+}
+
+
+
+func (h *TransactionHandler) GetTransaction(c *gin.Context) {
+
+    user, ok := c.Get("user_id")
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+        return
+    }
+    userID := user.(uint)
+
+
+    transaction, err := h.Service.GetTransactionByUserID(userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch transaction"})
+        return
+    }
+
+
+    if transaction.ID == 0 {
+        c.JSON(http.StatusNotFound, gin.H{"message": "no transaction found"})
+        return
+    }
+
+    c.JSON(http.StatusOK, transaction)
 }

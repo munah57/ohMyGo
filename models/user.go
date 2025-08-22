@@ -4,12 +4,15 @@ import "gorm.io/gorm"
 
 type User struct {
 	gorm.Model
-	Firstname      *string `json:"firstname,omitempty"`
-	Lastname       *string `json:"lastname,omitempty"`
-	Email          string  `json:"email" gorm:"unique;not null"`
-	Password       string  `json:"password" gorm:"not null"`
-	AccountNumber   string `json:"account_number" gorm:"unique;not null"`
-	Phonenumber    *uint `json:"phone_number,omitempty"`
+	Firstname     *string `json:"firstname,omitempty"`
+	Lastname      *string `json:"lastname,omitempty"`
+	Email         string  `json:"email" gorm:"unique;not null"`
+	Password      string  `json:"-" gorm:"not null"` //the dash means to ignore a field whenever the struct is converted to json
+	AccountNumber string  `json:"account_number" gorm:"unique;not null"`
+	Phonenumber   *uint   `json:"phone_number,omitempty"`
+
+	// eager loading
+	Account *Account `json:"account" gorm:"foreignKey:UserID;references:ID"`
 	//uint consistency throughout the app
 }
 
@@ -17,12 +20,9 @@ type User struct {
 
 type Account struct {
 	gorm.Model
-	UserID        uint     `json:"-" gorm:"not null"` // Foreign key to User
+	UserID        uint    `json:"-" gorm:"not null"`                          // Foreign key to User
 	AccountNumber string  `json:"account_number" gorm:"uniqueIndex;not null"` // is a string
-	Balance       float64  `json:"balance" gorm:"not null;default:0"`
-	Phonenumber    *string `json:"phone_number,omitempty"`
-	CurrentBalance float64 `json:"current_balance" gorm:"default:0"`
-
+	Balance       float64 `json:"balance" gorm:"not null;default:0"`
 }
 
 type SignUpRequest struct {
@@ -38,7 +38,7 @@ type LoginRequest struct {
 type UpdateProfileRequest struct {
 	Firstname   *string `json:"firstname" binding:"required"`
 	Lastname    *string `json:"lastname" binding:"required"`
-	Phonenumber *uint `json:"phone_number" binding:"required,min=10000000000,max=99999999999999"`
-
+	Phonenumber *uint   `json:"phone_number" gorm:"unique" binding:"required,min=10000000000,max=99999999999999"`
 }
 
+// find out the difference between eager laoding and lazy loading

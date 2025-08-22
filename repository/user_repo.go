@@ -13,7 +13,6 @@ type UserRepository interface {
 	CheckAccNumExists(accountNumber string) (bool, error)
 	GetUserByID(id uint) (*models.User, error)
 	UpdateUserProfile(user *models.User) error
-
 }
 
 type UserRepo struct{}
@@ -21,7 +20,7 @@ type UserRepo struct{}
 func (r *UserRepo) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	
-	err := db.Db.Where("email = ?", email).First(&user).Error
+	err := db.Db.Preload("Account").Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return &models.User{}, err
 	}
@@ -64,3 +63,4 @@ func (r *UserRepo) UpdateUserProfile(updatedUser *models.User) error {
 	return db.Db.Save(updatedUser).Error
 
 }
+

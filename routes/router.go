@@ -5,11 +5,15 @@ import (
 	"vaqua/middleware"
 
 	"github.com/gin-gonic/gin"
-
 	"gorm.io/gorm"
 )
 
-func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handler.TransferHandler, transactionHandler *handler.TransactionHandler, db *gorm.DB) *gin.Engine {
+func SetupRouter(
+	userHandler *handler.UserHandler,
+	transferRequestHandler *handler.TransferHandler,
+	transactionHandler *handler.TransactionHandler,
+	db *gorm.DB,
+) *gin.Engine {
 	r := gin.Default()
 
 	// Health check endpoint
@@ -28,7 +32,7 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 		c.JSON(200, gin.H{"status": "healthy", "db": "connected to database"})
 	})
 
-	// public routes
+	// Public routes
 	r.POST("/signup", userHandler.SignUpNewUserAcct)
 	r.POST("/login", userHandler.LoginUser)
 	
@@ -70,6 +74,6 @@ func SetupRouter(userHandler *handler.UserHandler, transferRequestHandler *handl
 		dashboardRoutes.POST("/transfer", transferRequestHandler.CreateTransfer)
 		
 	}
+  
 	return r
-
 }

@@ -17,6 +17,7 @@ type TransactionHandler struct {
 	Service *services.TransactionService
 }
 
+
 func (h *TransactionHandler) GetUserIncome(c *gin.Context) {
     // userID := c.GetUint("userID") // from auth middleware
 	uidAny, ok := c.Get("user_id")
@@ -47,11 +48,13 @@ func (h *TransactionHandler) GetUserIncome(c *gin.Context) {
 func (h *TransactionHandler) GetUserExpenses( c*gin.Context) {
 	// userID := c.GetUint("userID") 
 
+
 	uidAny, ok := c.Get("user_id")
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
+
 	userID := uidAny.(uint)
 
 	var start, end time.Time
@@ -92,7 +95,6 @@ func (h *TransactionHandler) GetBalance(c *gin.Context) {
 }
 
 
-//removed create transaction - this endpoint is not required given the transfer endpoint
 
 func (h *TransactionHandler) GetAllTransactions(c *gin.Context) {
 	uidAny, ok := c.Get("user_id")
@@ -117,6 +119,7 @@ func (h *TransactionHandler) GetAllTransactions(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, transactions)
 }
+
 
 
 func (h *TransactionHandler) GetTransaction(c *gin.Context) {

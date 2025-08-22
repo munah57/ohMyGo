@@ -12,8 +12,7 @@ type TransactionServices interface {
 	GetExpensesByPeriod(userID uint, start, end time.Time) ([]models.Transaction, float64, error)
 	GetAllTransactions(userID uint, page, limit int) ([]models.Transaction, error)
 	GetTransactionByUserID(userID uint) (*models.Transaction, error)
-    GetUserBalance(userID uint) (float64, error)
-
+  GetUserBalance(userID uint) (float64, error)
 }
 
 type TransactionService struct {
@@ -80,3 +79,4 @@ func (s *TransactionService) GetTransactionByUserID(userID uint) (*models.Transa
 	return &transaction, nil 
 
 }
+

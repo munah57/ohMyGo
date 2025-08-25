@@ -2,23 +2,23 @@ package db
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"vaqua/models"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"log"
+	"os"
+	"vaqua/models"
 )
 
 var Db *gorm.DB
 
 func InitDb() *gorm.DB {
 
-	var err error
-
-	err = godotenv.Load()
-	if err != nil {
-		log.Fatal("error loading .env file")
+	// Load .env if it exists (non-fatal)
+	if err := godotenv.Load(); err != nil {
+		log.Println("⚠️ No .env file found, relying on system environment variables")
+	} else {
+		log.Println("✅ Loaded environment variables from .env")
 	}
 
 	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
@@ -29,19 +29,21 @@ func InitDb() *gorm.DB {
 		os.Getenv("DB_PORT"),
 	)
 
+	// Connect to Postgres
+	var err error
 	Db, err = gorm.Open(postgres.Open(connStr), &gorm.Config{})
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	fmt.Println("connected to database successfully!")
 
-	err = Db.AutoMigrate(&models.User{}, &models.Account{}, &models.Transaction{})
-	if err != nil {
-		log.Fatal("unable to migrate schema", err)
+	log.Println("✅ Connected to database successfully!")
+
+	// Auto-migrate your models
+	if err := Db.AutoMigrate(&models.User{}, &models.Account{}, &models.Transaction{}); err != nil {
+		log.Fatalf("Unable to migrate schema: %v", err)
 	}
-	fmt.Println("migration completed successfully")
 
-	
+	log.Println("✅ Migration completed successfully")
 	return Db
 
 }

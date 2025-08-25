@@ -15,20 +15,39 @@ var Ctx = context.Background()
 var Client *redis.Client
 var Nil = redis.Nil
 
-// connect to Redis client
+// ConnectRedis initializes the Redis client
 func ConnectRedis() error {
-	Client = redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_ADDR"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       0,
-	})
+	var err error
 
-	// test the connection
-	_, err := Client.Ping(Ctx).Result()
+	// Prefer REDIS_URL (used by Render Key Value)
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		var opt *redis.Options
+		opt, err = redis.ParseURL(redisURL)
+		if err != nil {
+			return fmt.Errorf("invalid REDIS_URL: %v", err)
+		}
+		Client = redis.NewClient(opt)
+		fmt.Println("Connecting to Redis using REDIS_URL")
+	} else {
+		// Fallback: loca with REDIS_ADDR + REDIS_PASSWORD
+		addr := os.Getenv("REDIS_ADDR")
+		if addr == "" {
+			addr = "localhost:6379" // default local Redis
+		}
+		Client = redis.NewClient(&redis.Options{
+			Addr:     addr,
+			Password: os.Getenv("REDIS_PASSWORD"), // "" if no password
+			DB:       0,
+		})
+		fmt.Println("Connecting to Redis using REDIS_ADDR")
+	}
+
+	// Test the connection
+	_, err = Client.Ping(Ctx).Result()
 	if err != nil {
 		return fmt.Errorf("could not connect to Redis: %v", err)
 	}
 
-	fmt.Println("Connected to Redis")
+	fmt.Println("✅ Connected to Redis")
 	return nil
 }
